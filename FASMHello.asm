@@ -4,7 +4,8 @@ section .bss
     n resd 1
     k resd 1
     m resd 1
-    ;m_1 resd 1
+    tmp resd 1
+    
 
 section .data
     res dd 0
@@ -12,16 +13,14 @@ section .data
 section .text
 global main
 main:
-    mov ebp, esp; for correct debugging
-    ;write your code here
-    ;
+    mov ebp, esp
     call io_get_dec
     mov dword[n], eax
     call io_get_dec
     mov dword[k], eax
-    ;
+    
+    ;Поиск позиции старшего бита (m) 
     xor ecx, ecx
-    ;ищем позицию старшего бита в числе n (m)
 .loop1:
     shr dword[n], 1
     cmp dword[n], 0
@@ -29,54 +28,37 @@ main:
     inc ecx
     jmp .loop1
     
-    
 .find_m:
-    ;считаем сочетания
-    ;for(i = k; i < M; ++i){res += С из i по k}
-    mov dword[m], ecx
-    mov ecx, dword[k]
-    ;mov eax, dword[m]
-    ;dec eax; eax = m - 1
-    ;mov dword[m_1], eax
+    ;m = ecx (номер старшего бита)
+    mov eax, ecx
+    mov dword[m], eax
+   
+    ;Подготовка к вычислению числителя: i * (i-1) * ... * (i-k+1)
+    ;где i = m - 1
+    dec eax             ; eax = m - 1
+    mov edi, dword[m]
+    sub edi, dword[k]
+    inc edi             ; edi = m - k + 1 (нижняя граница множителя)
+    
+    mov dword[tmp], eax ; tmp = i (текущий множитель)
+    mov ebx, 1          ; ebx = 1 (аккумулятор результата)
     
 .loop2:
-    cmp ecx, dword[m]
-    ja .q2; i > m - 1
+    ; Сначала проверяем условие, потом умножаем
+    cmp dword[tmp], edi
+    jl .end_loop2       ; если tmp < edi, выходим
     
-    mov eax, ecx;eax = i
-    mov ebx, eax
-    sub ebx, dword[k]
-    inc ebx; ebx = n - k + 1
-.i_fac:
-    cmp eax, ebx
-    jle .end_i_fac
-    mul eax - 1
-    dec eax
-    jmp .i_fac
-.end_i_fac:
-    mov esi, eax; esi = n*...*(n-k+1)
-    ;k!
-    mov eax, dword[k]
-.k_fac:
-    cmp eax, 1
-    jle .end_k_fac
-
-    mul eax - 1
-    dec eax
-    jmp .k_fac
+    mov eax, ebx        ; eax = текущий накопленный результат
+    mul dword[tmp]      ; eax = eax * tmp (результат в EDX:EAX)
+    mov ebx, eax        ; сохраняем младшую часть результата в ebx
     
-            
-.end_k_fac:
-    mov edi, eax; edi = k!
-    mov eax, esi
-    xor edx, edx
-    div edi
-    add dword[res], eax
+    dec dword[tmp]      ; уменьшаем множитель
+    jmp .loop2
     
-
+.end_loop2:
+    ; В ebx теперь находится числитель: i*(i-1)*...*(i-k+1) 
 .q2:
-
-    
+    ; Здесь будет вычисление знаменателя k! и деление
     
     
     xor eax, eax
